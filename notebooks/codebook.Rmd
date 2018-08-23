@@ -1,0 +1,76 @@
+---
+title: '`hosmap` Codebook'
+output: 
+  html_document:
+    toc: true # table of content true
+    toc_float: true
+    depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    number_sections: true  ## if you want number sections at each table header
+    theme: readable  # many options for theme, this one is my favorite.
+    highlight: tango  # specifies the syntax highlighting style
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning=FALSE,message=FALSE)
+```
+
+```{r load data, results='hide',echo=FALSE}
+les_packages = lapply(c("ade4","caret","tidyverse","ggthemes","DT","data.table","dplyr",
+                        "readxl"),require, character.only = TRUE)
+Sys.setlocale("LC_CTYPE", "thai")
+options(encoding="UTF-8")
+
+clean_var = function(var_names){
+  v = gsub(' ','',var_names)
+  return(tolower(v))
+}
+
+## load files
+data_path = '../data/'
+raw_path = '../data/raw/'
+hospital_latlon = fread(paste0(data_path,'hospital_latlon.csv'), encoding = 'UTF-8',
+                        data.table = FALSE)
+accident_festival = fread(paste0(data_path,'accident_festival.csv'), encoding = 'UTF-8',
+                        data.table = FALSE)
+moph_hospital = fread(paste0(data_path,'moph_hospital.csv'), encoding = 'UTF-8',
+                        data.table = FALSE)
+```
+
+This codebook details all data cleaning and transformations as well as their rationales for the `hosmap` project. Raw datasets are obtained via the open data initiative [Data.go.th](https://data.go.th) among other sources. Resulting datasets we use for our analysis are:
+
+# Hospital Latitude/Longitude Data
+
+`hospital_latlon.csv` contains `r dim(hospital_latlon)[1]` hospitals as listed by [Ministry of Public Health](http://203.157.10.8/hcode_2014/p_export.php?p=3) (downloaded as `hospital_addresses.csv`). We augmented the data with latitude and longitude of each hospital queried via [Google Map API](https://cloud.google.com/maps-platform/). Code can be found in `scripts/scrape_geocode.py`.
+
+# MoPH-affiliated Hospital Data
+
+`moph_hospital.csv` contains `r dim(moph_hospital)[1]` hospitals affiliated with MoPH as extracted from the pdf provided by [Collaborative Project to Increase Production of Rurual Doctor](http://www.cpird.in.th/index.php/news_activity/news-info/172-data-phdb-hos-2560.html) (downloaded as `moph_hospital.pdf`).
+
+```{r}
+#additional data for big hospitals
+moph_hospital = fread(paste0(raw_path,'moph_hospital.csv'),
+                        data.table = FALSE)
+#choose only number columns
+moph_hospital = moph_hospital[,c(3,6:dim(moph_hospital)[2])]
+names(moph_hospital)[1] = 'hospital_code'
+names(moph_hospital) = clean_var(names(moph_hospital))
+write.csv(moph_hospital,paste0(data_path,'moph_hospital.csv'),row.names = FALSE)
+```
+
+# New Year Accident Data
+
+`accident_festival.csv` contains `r dim(accident_festival)[1]` cases of accidents from the dataset provided by [National Institute for Emergency Medicine](https://data.go.th/DatasetDetail.aspx?id=7d61f508-d2e1-4f0c-8408-dfde29f111f5) (downloaded as `51-58_CutName_NewYear_Edit.xlsx`).
+
+
+```{r}
+accident_festival = read_excel(paste0(raw_path,'51-58_CutName_NewYear_Edit.xlsx'))
+names(accident_festival) = c('year', 'iso', 'province','hospital_code', 'hospital_name', 'date', 'time', 'sex', 'age', 'location', 'patient_status', 'vehicle_1', 'vehicle_2', 'belt', 'drinking', 'reporter', 'referral_flag', 'result', 'days')
+num_cols = c('year','date','age','days')
+accident_festival$year = sapply(accident_festival$year,
+  function(x) {
+  as.numeric(paste0('25',strsplit(x,' ')[[1]][2])) - 543
+  })
+accident_festival[,num_cols] = apply(accident_festival[,num_cols],2,as.numeric)
+write.csv(accident_festival,paste0(data_path,'accident_festival.csv'),row.names = FALSE)
+```
+

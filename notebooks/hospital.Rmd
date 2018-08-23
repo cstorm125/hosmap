@@ -1,0 +1,112 @@
+---
+title: 'What We Learn About Our Hospitals from Eight Years of Traffic Accident Data'
+output: 
+  html_document:
+    toc: true # table of content true
+    toc_float: true
+    depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    number_sections: true  ## if you want number sections at each table header
+    theme: readable  # many options for theme, this one is my favorite.
+    highlight: tango  # specifies the syntax highlighting style
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,warning=FALSE,message=FALSE)
+```
+
+# Clean
+
+```{r load data, results='hide'}
+les_packages = lapply(c("ade4","caret","tidyverse","ggthemes","DT","data.table","dplyr"),require, character.only = TRUE)
+Sys.setlocale("LC_CTYPE", "thai")
+options(encoding="UTF-8")
+
+## load files
+data_path = '../data/'
+#accident and latitude / longitude
+accident_festival = fread(paste0(data_path,'accident_festival.csv'),
+                          encoding = 'UTF-8',
+                          data.table = FALSE)
+shouganai = function(result){
+  ifelse(result %in% 
+        c('ตายที่เกิดเหตุ','ตายระหว่างนำส่ง','ตายระหว่างส่งต่อ'),1,0)
+}
+accident_festival = accident_festival %>% mutate(shouganai=sapply(result,shouganai))
+accident_festival$hospital_code = as.integer(accident_festival$hospital_code)
+
+#hospital and latitude / longitude
+hospital_latlon = fread(paste0(data_path,'hospital_latlon.csv'), encoding='UTF-8',
+                        data.table = FALSE,na.strings = c(' ','NA'))
+
+#additional data for big hospitals
+ministry_hospital = fread(paste0(data_path,'moph_hospital.csv'),
+                          encoding = 'UTF-8',
+                          data.table = FALSE)
+is_ministry = function(hospital_code){
+  return(ifelse(hospital_code %in% ministry_hospital$hospital_code,1,0))
+}
+accident_festival$is_ministry = sapply(accident_festival$hospital_code,is_ministry)
+```
+
+
+# Exploration
+
+## Hospitals with The Best Survival Rates
+
+The plot shows hospitals with the best survival rates for each We ignore death at scene and transportation cases which are difficult or impossible to account for. We only consider hospitals which recieve more than 160 cases over 2008-2015 since this seems to be the threshold where distribution of survival rates stabilize.
+
+```{r}
+survive_agg = accident_festival %>% filter(shouganai==0) %>%
+  mutate(survive_flag = ifelse(result=='ทุเลา/หาย',1,0)) %>%
+  group_by(province,hospital_name) %>%
+  summarise(survive_rate = mean(survive_flag), nb_cases=n()) %>% ungroup
+
+ds = NULL
+for(i in (10:20)*10){
+  d = survive_agg %>% filter(nb_cases > i) %>% mutate(th=as.character(i))
+  ds = rbind(ds,d)
+}
+
+g = ggplot(ds,aes(x=survive_rate,color=th,y=..scaled..)) + geom_density() +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+ggplotly(g)
+survive_agg = survive_agg %>% filter(nb_cases > 160)
+write.csv(survive_agg,paste0(data_path,'survive_agg.csv'),row.names = FALSE)
+```
+
+## Hospitals with Shortest Recover Periods
+
+Using the same filters, we show the distribution of average recovery time from 2008-2015.
+
+```{r}
+recover_agg = accident_festival %>% filter(result=='ทุเลา/หาย') %>%
+  group_by(province,hospital_name) %>%
+  summarise(avg_recover = mean(days), nb_cases=n()) %>% ungroup
+
+ds = NULL
+for(i in (10:20)*10){
+  d = recover_agg %>% filter(nb_cases > i) %>% mutate(th=as.character(i))
+  ds = rbind(ds,d)
+}
+
+g = ggplot(ds,aes(x=avg_recover,color=th,y=..scaled..)) + geom_density() +
+  theme_minimal() +
+  theme(legend.position = 'bottom')
+ggplotly(g)
+
+recover_agg = recover_agg %>% filter(nb_cases > 160)
+write.csv(recover_agg,paste0(data_path,'recover_agg.csv'),row.names = FALSE)
+```
+
+## How Long Are You From Each Type of Hospitals?
+
+We use [three-word addresses]() of all Thailand converted to latitude and longitude coordinates to denote all locations in Thailand. Then we use Google Map API to find out the amount of time taken from each point to the nearest hospital. 
+
+```{r}
+
+```
+
+
+
+
