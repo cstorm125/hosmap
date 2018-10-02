@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE,warning=FALSE,message=FALSE)
 
 ```{r load data, results='hide',echo=FALSE}
 les_packages = lapply(c("ade4","caret","tidyverse","ggthemes","DT","data.table","dplyr",
-                        "readxl"),require, character.only = TRUE)
+                        "readxl","rvest"),require, character.only = TRUE)
 Sys.setlocale("LC_CTYPE", "thai")
 options(encoding="UTF-8")
 
@@ -74,3 +74,10 @@ accident_festival[,num_cols] = apply(accident_festival[,num_cols],2,as.numeric)
 write.csv(accident_festival,paste0(data_path,'accident_festival.csv'),row.names = FALSE)
 ```
 
+# Nearest Hospital Fishnet
+
+```{r}
+nearest_hos = fread(paste0(raw_path,'nearest_hos.csv'),data.table = FALSE)
+```
+
+We did preprocessing with ArcGIS to cast a one-sq-km-tile fishnet over all of Thailand. This resulted in `r dim(nearest_hos)[1]` points. We then calculate the nearest Euclidean distance between each point with the nearest hospital. After that, we use [GraphHopper API](https://graphhopper.com/api/1/docs/routing) to find time and distance taken between those points (See `graphhopper_api.py`). The processed file is saved as `route_hos_all.csv`.

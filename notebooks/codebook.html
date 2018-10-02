@@ -276,6 +276,11 @@ accident_festival<span class="op">$</span>year =<span class="st"> </span><span c
 accident_festival[,num_cols] =<span class="st"> </span><span class="kw">apply</span>(accident_festival[,num_cols],<span class="dv">2</span>,as.numeric)
 <span class="kw">write.csv</span>(accident_festival,<span class="kw">paste0</span>(data_path,<span class="st">'accident_festival.csv'</span>),<span class="dt">row.names =</span> <span class="ot">FALSE</span>)</code></pre></div>
 </div>
+<div id="nearest-hospital-fishnet" class="section level1">
+<h1><span class="header-section-number">4</span> Nearest Hospital Fishnet</h1>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nearest_hos =<span class="st"> </span><span class="kw">fread</span>(<span class="kw">paste0</span>(raw_path,<span class="st">'nearest_hos.csv'</span>),<span class="dt">data.table =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<p>We did preprocessing with ArcGIS to cast a one-sq-km-tile fishnet over all of Thailand. This resulted in 515137 points. We then calculate the nearest Euclidean distance between each point with the nearest hospital. After that, we use <a href="https://graphhopper.com/api/1/docs/routing">GraphHopper API</a> to find time and distance taken between those points (See <code>graphhopper_api.py</code>). The processed file is saved as <code>route_hos_all.csv</code>.</p>
+</div>
 
 
 
