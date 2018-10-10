@@ -21,7 +21,8 @@ Sys.setlocale("LC_CTYPE", "thai")
 options(encoding="UTF-8")
 
 clean_var = function(var_names){
-  v = gsub(' ','',var_names)
+  v = gsub('[^a-zA-Z0-9]','',var_names)
+  v = gsub(' ','_',var_names)
   return(tolower(v))
 }
 
